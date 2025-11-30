@@ -57,8 +57,8 @@ class GymETLBronze:
                 dosis VARCHAR(200),
                 numero_serie INTEGER,
                 repeticiones VARCHAR,
-                carga_kg DECIMAL(6,2),
-                rir_rpe INTEGER,
+                carga_kg VARCHAR,
+                rir_rpe VARCHAR,
                 tipo_metrica VARCHAR(10),
                 fecha_carga TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (sesion_id) REFERENCES bronze_sesiones(id)
@@ -297,8 +297,8 @@ class GymETLBronze:
                             'dosis': dosis if pd.notna(dosis) else None,
                             'numero_serie': num_serie,
                             'repeticiones': str(reps) if pd.notna(reps) else None,
-                            'carga_kg': float(carga) if pd.notna(carga) else None,
-                            'rir_rpe': int(rir) if pd.notna(rir) else None,
+                            'carga_kg': str(carga) if pd.notna(carga) else None,
+                            'rir_rpe': str(rir) if pd.notna(rir) else None,
                             'tipo_metrica': 'RIR'
                         }
                         series.append(serie_data)
