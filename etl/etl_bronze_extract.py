@@ -123,6 +123,36 @@ class GymETLBronze:
         
         return dias
     
+    def _detect_microciclos(self, df: pd.DataFrame) -> List[Dict]:
+        """Detecta microciclos dinámicamente de la fila 21"""
+        
+        microciclos = []
+        fila_micros = 21  # Fila donde están los encabezados de microciclos
+        
+        # Buscar en las columnas donde dice "MICROCICLO"
+        for col in range(7, 100):  # Buscar hasta columna 100
+            if col >= len(df.columns):
+                break
+            
+            val = df.iloc[fila_micros, col]
+            
+            if pd.notna(val) and 'MICROCICLO' in str(val):
+                # Extraer número del microciclo
+                micro_str = str(val)
+                try:
+                    # "MICROCICLO 1" -> extraer el número
+                    numero = int(micro_str.split()[-1])
+                except:
+                    numero = len(microciclos) + 1
+                
+                microciclos.append({
+                    'nombre': micro_str,
+                    'numero': numero,
+                    'col_inicio': col
+                })
+        
+        return microciclos
+    
     def _extract_series_data(self, df: pd.DataFrame, sheet_name: str) -> List[Dict]:
         """Extrae datos de series de ejercicios"""
         
@@ -131,13 +161,11 @@ class GymETLBronze:
         # Buscar donde empiezan los ejercicios (después de fila 20)
         fila_inicial = 23
         
-        # Definir microciclos y sus columnas
-        microciclos = [
-            {'nombre': 'MICROCICLO 1', 'numero': 1, 'col_inicio': 7},
-            {'nombre': 'MICROCICLO 2', 'numero': 2, 'col_inicio': 13},
-            {'nombre': 'MICROCICLO 3', 'numero': 3, 'col_inicio': 19},
-            {'nombre': 'MICROCICLO 4', 'numero': 4, 'col_inicio': 25},
-        ]
+        # Detectar microciclos dinámicamente de la fila 21
+        microciclos = self._detect_microciclos(df)
+        print(f"  🔍 Microciclos detectados: {len(microciclos)}")
+        for micro in microciclos:
+            print(f"    - {micro['nombre']} (columna {micro['col_inicio']})")
         
         fila_actual = fila_inicial
         
