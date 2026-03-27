@@ -38,10 +38,28 @@ def chart_distribucion_grupos(df: pd.DataFrame) -> go.Figure:
     if df.empty:
         return go.Figure()
     df = df.copy()
-    df["label"] = df["tipo_ejercicio"].map(_muscle_label)
-    colors = [_muscle_color(t) for t in df["tipo_ejercicio"]]
+    total = df["volumen"].sum()
+    if total > 0:
+        df["pct"] = df["volumen"] / total
+    else:
+        df["pct"] = 0
+
+    # Agrupar grupos con menos del 2% en "Otros"
+    umbral = 0.02
+    principales = df[df["pct"] >= umbral].copy()
+    otros = df[df["pct"] < umbral]
+    if not otros.empty:
+        otros_row = pd.DataFrame([{
+            "tipo_ejercicio": "Otros",
+            "volumen": otros["volumen"].sum(),
+            "pct": otros["pct"].sum(),
+        }])
+        principales = pd.concat([principales, otros_row], ignore_index=True)
+
+    principales["label"] = principales["tipo_ejercicio"].map(_muscle_label)
+    colors = [_muscle_color(t) for t in principales["tipo_ejercicio"]]
     fig = go.Figure(data=[go.Pie(
-        labels=df["label"], values=df["volumen"],
+        labels=principales["label"], values=principales["volumen"],
         hole=0.5, marker_colors=colors,
         textinfo="label+percent", textposition="outside",
     )])
