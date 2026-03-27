@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run lint)",
+      "Bash(npm run test *)",
+      "Read(~/.zshrc)"
+    ],
+    "deny": [
+      "Bash(curl *)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)",
+      "Bash(**/.env)",
+      "Read(**/.env)",
+      "Write(**/.env)"
+    ]
+  },
+  "model": "opus",
+  "alwaysThinkingEnabled": true,
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+    "OTEL_METRICS_EXPORTER": "otlp"
+  },
+  "companyAnnouncements": [
+    "Welcome to Acme Corp! Review our code guidelines at docs.acme.com",
+    "Reminder: Code reviews required for all PRs",
+    "New security policy in effect"
+  ]
+}
