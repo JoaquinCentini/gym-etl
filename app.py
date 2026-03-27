@@ -55,8 +55,12 @@ if conn is None:
     st.title("GymTracker")
     st.markdown("### Bienvenido")
     st.markdown(
-        "Para comenzar, subí tu archivo Excel de entrenamiento "
-        "usando el panel lateral."
+        "Para comenzar, **subi tu archivo Excel de entrenamiento** "
+        "usando el panel lateral izquierdo."
+    )
+    st.markdown(
+        "El Excel debe tener hojas con nombre **Meso 1**, **Meso 2**, etc. "
+        "donde cada hoja contiene los dias y microciclos de tu plan."
     )
     st.stop()
 
