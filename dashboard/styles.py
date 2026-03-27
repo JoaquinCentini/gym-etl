@@ -51,6 +51,9 @@ PLOTLY_TEMPLATE = go.layout.Template(
 
 def kpi_card(title: str, value: str, subtitle: str = "", color: str = "#FF4B4B"):
     """Genera HTML para una tarjeta KPI estilizada"""
+    sub_html = f"""<div style="font-size: 0.8rem; color: #888; margin-top: 2px;">
+            {subtitle}
+        </div>""" if subtitle else ""
     return f"""
     <div style="
         background: linear-gradient(135deg, {color}22, {color}11);
@@ -58,6 +61,10 @@ def kpi_card(title: str, value: str, subtitle: str = "", color: str = "#FF4B4B")
         border-radius: 8px;
         padding: 16px 20px;
         margin: 4px 0;
+        min-height: 120px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     ">
         <div style="font-size: 0.85rem; color: #999; text-transform: uppercase;
                     letter-spacing: 0.05em; margin-bottom: 4px;">
@@ -66,9 +73,7 @@ def kpi_card(title: str, value: str, subtitle: str = "", color: str = "#FF4B4B")
         <div style="font-size: 2rem; font-weight: 700; color: #FAFAFA;">
             {value}
         </div>
-        <div style="font-size: 0.8rem; color: #888; margin-top: 2px;">
-            {subtitle}
-        </div>
+        {sub_html}
     </div>
     """
 

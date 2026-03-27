@@ -82,7 +82,7 @@ def render(conn: duckdb.DuckDBPyConnection, f: Filters):
     # Selector de días de descanso — radio buttons en vez de slider
     dias_descanso = st.radio(
         "Días de descanso permitidos en la racha",
-        options=[1, 2, 3],
+        options=[1, 2, 3, 4, 5],
         horizontal=True,
         key="frecuencia_dias_descanso",
     )
