@@ -37,8 +37,10 @@ def _calcular_racha(fechas: pd.Series, dias_descanso: int = 1) -> int:
 
 
 def _dias_por_mes(df: pd.DataFrame) -> pd.DataFrame:
-    """Retorna DataFrame con días entrenados por mes, excluyendo meses parciales
-    cuando hay suficientes datos."""
+    """Retorna DataFrame con días entrenados por mes.
+
+    Solo excluye el primer mes si empezó después del día 1 (mes parcial
+    al inicio del dataset)."""
     if df.empty:
         return pd.DataFrame(columns=["anio", "mes", "dias"])
 
@@ -49,7 +51,9 @@ def _dias_por_mes(df: pd.DataFrame) -> pd.DataFrame:
         .rename(columns={"fecha": "dias"})
     )
     if len(resultado) > 2:
-        resultado = resultado.iloc[1:-1]
+        primera_fecha = pd.to_datetime(df["fecha"]).min()
+        if primera_fecha.day > 1:
+            resultado = resultado.iloc[1:]
     return resultado
 
 
