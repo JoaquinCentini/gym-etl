@@ -20,7 +20,14 @@ for path in (ETL_BRONZE_DIR, ETL_SILVER_DIR):
     if path not in sys.path:
         sys.path.insert(0, path)
 
-LOCAL_DB_PATH = os.path.join(PROJECT_ROOT, "data", "gym.duckdb")
+_ON_STREAMLIT_CLOUD = os.path.exists("/mount/src")
+
+if _ON_STREAMLIT_CLOUD:
+    # Streamlit Cloud: usar /tmp/ que siempre es escribible
+    LOCAL_DB_PATH = os.path.join(tempfile.gettempdir(), "gym.duckdb")
+else:
+    LOCAL_DB_PATH = os.path.join(PROJECT_ROOT, "data", "gym.duckdb")
+
 RAW_DIR = os.path.join(PROJECT_ROOT, "data", "raw")
 ALUMNO = "CentiniJoaquín"
 
@@ -101,6 +108,11 @@ def _open_db(_db_mtime: float) -> duckdb.DuckDBPyConnection:
 def _get_db_connection() -> duckdb.DuckDBPyConnection:
     """Obtiene conexión a la DB, invalidando el cache si la DB cambió en disco."""
     global _last_db_mtime
+    if not os.path.exists(LOCAL_DB_PATH):
+        raise FileNotFoundError(
+            f"La base de datos no existe en {LOCAL_DB_PATH}. "
+            "Es posible que el ETL haya fallado al procesar el Excel."
+        )
     current_mtime = os.path.getmtime(LOCAL_DB_PATH)
     if _last_db_mtime and current_mtime != _last_db_mtime:
         logger.info("DB cambió en disco (mtime %.2f → %.2f), invalidando cache",
@@ -110,7 +122,7 @@ def _get_db_connection() -> duckdb.DuckDBPyConnection:
     return _open_db(current_mtime)
 
 
-def load_from_excel(_file_bytes: bytes, file_name: str) -> duckdb.DuckDBPyConnection:
+def load_from_excel(_file_bytes: bytes, file_name: str) -> duckdb.DuckDBPyConnection | None:
     """Ejecuta el ETL desde un Excel subido por el usuario"""
     tmp_dir = tempfile.mkdtemp()
     tmp_excel_path = os.path.join(tmp_dir, file_name)
@@ -118,12 +130,22 @@ def load_from_excel(_file_bytes: bytes, file_name: str) -> duckdb.DuckDBPyConnec
         f.write(_file_bytes)
 
     _open_db.clear()
-    _run_etl(tmp_excel_path)
+    try:
+        _run_etl(tmp_excel_path)
+    except Exception as e:
+        logger.error("ETL falló al procesar el Excel: %s", e)
+        st.error(f"Error al procesar el Excel: {e}")
+        return None
 
     try:
         os.unlink(tmp_excel_path)
     except OSError:
         pass
+
+    if not os.path.exists(LOCAL_DB_PATH):
+        logger.error("ETL terminó pero la DB no fue creada")
+        st.error("El ETL no pudo crear la base de datos. Revisá que el Excel tenga hojas con 'Meso' en el nombre.")
+        return None
 
     return _get_db_connection()
 
