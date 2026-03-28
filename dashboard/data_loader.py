@@ -60,19 +60,12 @@ def _run_etl(excel_path: str):
 
     os.makedirs(os.path.dirname(LOCAL_DB_PATH), exist_ok=True)
 
-    # Limpiar tablas existentes para evitar datos duplicados de hojas renombradas
-    if os.path.exists(LOCAL_DB_PATH):
+    # Borrar DB vieja para evitar datos duplicados de hojas renombradas
+    for f_path in glob.glob(LOCAL_DB_PATH + "*"):
         try:
-            cleanup_conn = duckdb.connect(LOCAL_DB_PATH)
-            tables = [r[0] for r in cleanup_conn.execute(
-                "SELECT table_name FROM information_schema.tables"
-            ).fetchall()]
-            for t in tables:
-                cleanup_conn.execute(f"DROP TABLE IF EXISTS {t}")
-            cleanup_conn.close()
-        except Exception as e:
-            logger.warning("Error limpiando DB vieja, recreando: %s", e)
-            os.remove(LOCAL_DB_PATH)
+            os.remove(f_path)
+        except OSError as e:
+            logger.warning("No se pudo borrar %s: %s", f_path, e)
 
     xl = pd.ExcelFile(excel_path)
     meso_sheets = [s for s in xl.sheet_names if "Meso" in s]
