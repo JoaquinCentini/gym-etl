@@ -167,13 +167,13 @@ class GymETLBronze:
         return dias
     
     def _detect_microciclos(self, df: pd.DataFrame) -> List[Dict]:
-        """Detecta microciclos buscando 'MICROCICLO' en las primeras 30 filas"""
+        """Detecta microciclos buscando 'MICROCICLO' en las primeras 35 filas"""
 
         microciclos = []
         fila_micros = None
 
         # Buscar en qué fila aparecen los encabezados de MICROCICLO
-        for fila in range(min(30, len(df))):
+        for fila in range(min(35, len(df))):
             for col in range(7, min(100, len(df.columns))):
                 val = df.iloc[fila, col]
                 if pd.notna(val) and 'MICROCICLO' in str(val).upper():
@@ -208,12 +208,25 @@ class GymETLBronze:
         return microciclos
     
     def _find_label_row(self, df: pd.DataFrame, fila_inicio: int, fila_fin: int, label: str) -> int | None:
-        """Busca la fila que contiene una etiqueta en las columnas 1-10 del bloque"""
+        """Busca la fila que contiene una etiqueta en las columnas 1-50 del bloque"""
         for fila in range(fila_inicio, min(fila_fin, len(df))):
-            for col in range(1, min(11, len(df.columns))):
+            for col in range(1, min(50, len(df.columns))):
                 val = df.iloc[fila, col]
                 if pd.notna(val) and label in str(val).upper():
                     return fila
+        return None
+
+    def _find_metadata_value(self, df: pd.DataFrame, fila: int, col_inicio: int, max_offset: int = 5):
+        """Busca el primer valor numérico en un rango de columnas cerca del microciclo"""
+        for offset in range(1, max_offset + 1):
+            col = col_inicio + offset
+            val = self._safe_cell(df, fila, col)
+            if val is not None:
+                try:
+                    float(val)
+                    return val
+                except (ValueError, TypeError):
+                    continue
         return None
 
     def _safe_cell(self, df: pd.DataFrame, fila: int, col: int):
@@ -249,12 +262,12 @@ class GymETLBronze:
         # Buscar fila de PRS dinámicamente
         fila_prs = self._find_label_row(df, fila_inicio, meta_limit, 'PRS')
         if fila_prs is not None:
-            prs = self._safe_cell(df, fila_prs, micro['col_inicio'] - 1)
+            prs = self._find_metadata_value(df, fila_prs, micro['col_inicio'])
 
         # Buscar fila de RPE dinámicamente
         fila_rpe = self._find_label_row(df, fila_inicio, meta_limit, 'RPE')
         if fila_rpe is not None:
-            rpe = self._safe_cell(df, fila_rpe, micro['col_inicio'] - 1)
+            rpe = self._find_metadata_value(df, fila_rpe, micro['col_inicio'])
 
         return {
             'id': None,
