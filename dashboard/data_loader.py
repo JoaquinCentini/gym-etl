@@ -79,6 +79,13 @@ def _run_etl(excel_path: str):
     xl.close()
     logger.info("Excel: %d hojas de mesociclo", len(meso_sheets))
 
+    with GymETLBronze(excel_path, LOCAL_DB_PATH) as bronze:
+        for sheet in meso_sheets:
+            try:
+                bronze.extract_sheet(sheet)
+            except Exception as e:
+                logger.warning("Error procesando %s: %s", sheet, e)
+
     with GymETLSilver(LOCAL_DB_PATH) as silver:
         silver.transform_bronze_to_silver()
 
