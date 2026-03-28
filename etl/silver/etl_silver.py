@@ -16,11 +16,7 @@ logger = logging.getLogger(__name__)
 class GymETLSilver:
     def __init__(self, db_path: str = "data/gym.duckdb"):
         self.db_path = db_path
-        if not os.path.exists(db_path):
-            raise FileNotFoundError(
-                f"No se encontró la base de datos: {db_path}. "
-                "Ejecutá primero el ETL Bronze."
-            )
+        os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
         self.conn = duckdb.connect(db_path)
         self._validate_bronze_tables()
         self._create_silver_tables()

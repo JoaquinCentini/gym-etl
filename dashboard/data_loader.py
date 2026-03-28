@@ -60,21 +60,24 @@ def _run_etl(excel_path: str):
 
     os.makedirs(os.path.dirname(LOCAL_DB_PATH), exist_ok=True)
 
-    # Borrar DB vieja para evitar datos duplicados de hojas renombradas
+    # Limpiar tablas existentes para evitar datos duplicados de hojas renombradas
     if os.path.exists(LOCAL_DB_PATH):
-        os.remove(LOCAL_DB_PATH)
+        try:
+            cleanup_conn = duckdb.connect(LOCAL_DB_PATH)
+            tables = [r[0] for r in cleanup_conn.execute(
+                "SELECT table_name FROM information_schema.tables"
+            ).fetchall()]
+            for t in tables:
+                cleanup_conn.execute(f"DROP TABLE IF EXISTS {t}")
+            cleanup_conn.close()
+        except Exception as e:
+            logger.warning("Error limpiando DB vieja, recreando: %s", e)
+            os.remove(LOCAL_DB_PATH)
 
     xl = pd.ExcelFile(excel_path)
     meso_sheets = [s for s in xl.sheet_names if "Meso" in s]
     xl.close()
     logger.info("Excel: %d hojas de mesociclo", len(meso_sheets))
-
-    with GymETLBronze(excel_path, LOCAL_DB_PATH) as bronze:
-        for sheet in meso_sheets:
-            try:
-                bronze.extract_sheet(sheet)
-            except Exception as e:
-                logger.warning("Error procesando %s: %s", sheet, e)
 
     with GymETLSilver(LOCAL_DB_PATH) as silver:
         silver.transform_bronze_to_silver()
