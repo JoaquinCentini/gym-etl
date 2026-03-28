@@ -24,6 +24,9 @@ LOCAL_DB_PATH = os.path.join(PROJECT_ROOT, "data", "gym.duckdb")
 RAW_DIR = os.path.join(PROJECT_ROOT, "data", "raw")
 ALUMNO = "CentiniJoaquín"
 
+# Último mtime conocido de la DB — para detectar cambios externos
+_last_db_mtime: float = 0.0
+
 
 def _find_latest_excel() -> str | None:
     """Busca el Excel más reciente en data/raw/ con patrón YYYYMMDD<Alumno>.xlsx"""
@@ -88,8 +91,20 @@ def has_local_db() -> bool:
 def _open_db(_db_mtime: float) -> duckdb.DuckDBPyConnection:
     """Abre conexión a la DB. El parámetro _db_mtime invalida el cache
     cuando la DB cambia."""
-    logger.info("Abriendo conexión a DB local: %s", LOCAL_DB_PATH)
+    logger.info("Abriendo conexión a DB local: %s (mtime=%.2f)", LOCAL_DB_PATH, _db_mtime)
     return duckdb.connect(LOCAL_DB_PATH, read_only=False)
+
+
+def _get_db_connection() -> duckdb.DuckDBPyConnection:
+    """Obtiene conexión a la DB, invalidando el cache si la DB cambió en disco."""
+    global _last_db_mtime
+    current_mtime = os.path.getmtime(LOCAL_DB_PATH)
+    if _last_db_mtime and current_mtime != _last_db_mtime:
+        logger.info("DB cambió en disco (mtime %.2f → %.2f), invalidando cache",
+                     _last_db_mtime, current_mtime)
+        _open_db.clear()
+    _last_db_mtime = current_mtime
+    return _open_db(current_mtime)
 
 
 def load_from_excel(_file_bytes: bytes, file_name: str) -> duckdb.DuckDBPyConnection:
@@ -107,11 +122,13 @@ def load_from_excel(_file_bytes: bytes, file_name: str) -> duckdb.DuckDBPyConnec
     except OSError:
         pass
 
-    return _open_db(os.path.getmtime(LOCAL_DB_PATH))
+    return _get_db_connection()
 
 
 def clear_excel_cache():
     """Limpia el cache de la DB para forzar reprocesamiento"""
+    global _last_db_mtime
+    _last_db_mtime = 0.0
     _open_db.clear()
 
 
@@ -131,6 +148,6 @@ def get_connection(uploaded_file=None) -> duckdb.DuckDBPyConnection | None:
         _run_etl(new_excel)
 
     if has_local_db():
-        return _open_db(os.path.getmtime(LOCAL_DB_PATH))
+        return _get_db_connection()
 
     return None
