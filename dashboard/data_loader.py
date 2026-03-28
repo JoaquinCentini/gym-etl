@@ -89,6 +89,19 @@ def _run_etl(excel_path: str):
     with GymETLSilver(LOCAL_DB_PATH) as silver:
         silver.transform_bronze_to_silver()
 
+    # Verificar que las tablas Silver se crearon correctamente
+    verify_conn = duckdb.connect(LOCAL_DB_PATH, read_only=True)
+    try:
+        tables = {r[0] for r in verify_conn.execute(
+            "SELECT table_name FROM information_schema.tables"
+        ).fetchall()}
+        expected = {'silver_dim_plan', 'silver_dim_ejercicios', 'silver_dim_fecha', 'silver_fact_series'}
+        missing = expected - tables
+        if missing:
+            raise RuntimeError(f"ETL completó pero faltan tablas Silver: {missing}. Tablas existentes: {tables}")
+    finally:
+        verify_conn.close()
+
     logger.info("ETL completado — DB local actualizada")
 
 
@@ -173,6 +186,14 @@ def get_connection(uploaded_file=None) -> duckdb.DuckDBPyConnection | None:
         _run_etl(new_excel)
 
     if has_local_db():
-        return _get_db_connection()
+        conn = _get_db_connection()
+        # Verificar que las tablas Silver existen
+        tables = {r[0] for r in conn.execute(
+            "SELECT table_name FROM information_schema.tables"
+        ).fetchall()}
+        if 'silver_dim_plan' not in tables:
+            logger.warning("DB existe pero sin tablas Silver: %s", tables)
+            return None
+        return conn
 
     return None
